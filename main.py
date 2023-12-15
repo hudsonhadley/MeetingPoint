@@ -107,16 +107,7 @@ fig.update_geos(visible=True, resolution=50, scope='usa',
                 showcountries=True, countrycolor='Black',
                 showsubunits=True, subunitcolor='Brown')
 
-fig.update_layout(
-    autosize=True,
-    geo=dict(
-        center=dict(
-            lat=best_point.x,
-            lon=best_point.y
-        ),
-        scope='usa',
-        projection_scale=2
-    )
-)
+
+fig.update_geos(fitbounds="locations")
 
 fig.show()

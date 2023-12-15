@@ -13,29 +13,17 @@ from random import uniform, randint
 def fitness_test(generation_points, test_points):
     scores = []
     for child in generation_points:
-        average_distance = total_average_distance(child, test_points)
+        distances = []
+        for point in test_points:
+            distances.append(dist.distance([child.x, child.y], [point.x, point.y]).km)
 
-        difference = maximum_displacement(child, test_points)
+        average_distance = sum(distances) / len(distances)
+
+        difference = max(distances) - min(distances)
 
         scores.append(average_distance + difference)
 
     return scores
-
-
-def maximum_displacement(child, test_points):
-    distances = []
-    for point in test_points:
-        distances.append(dist.distance([child.x, child.y], [point.x, point.y]).km)
-
-    return max(distances) - min(distances)
-
-
-def total_average_distance(child, test_points):
-    distances = []
-    for point in test_points:
-        distances.append(dist.distance([child.x, child.y], [point.x, point.y]).km)
-
-    return sum(distances) / len(distances)
 
 
 def merge(parents, population_size, mutation_rate):
@@ -45,16 +33,11 @@ def merge(parents, population_size, mutation_rate):
         new_child_x = parents[randint(0, len(parents) - 1)].x
         new_child_y = parents[randint(0, len(parents) - 1)].y
 
-        try:
-            new_child_x += uniform(-mutation_rate, mutation_rate)
-        except ValueError:
-            pass
+        new_child_x += uniform(-mutation_rate, mutation_rate)
+        new_child_y += uniform(-mutation_rate, mutation_rate)
 
-        try:
-            new_child_y += uniform(-mutation_rate, mutation_rate)
-        except ValueError:
-            pass
-
+        new_child_x = ((new_child_x + 90) % 179) - 90
+        new_child_y = ((new_child_y + 180) % 359) - 180
 
         children.append(Point([new_child_x, new_child_y]))
 
@@ -65,15 +48,15 @@ df = pd.read_csv("cities.csv")
 
 coords = [Point(xy) for xy in zip(df['Latitude'], df['Longitude'])]
 
-generations = 300
-population = 300
+generations = 200
+population = 200
 
 best_point = None
 best_score = sys.maxsize
 for generation_count in range(generations):
 
     if generation_count == 0:
-        generation = [Point(uniform(-90, 90), uniform(-90, 90)) for _ in range(population)]
+        generation = [Point(uniform(-90, 90), uniform(-180, 180)) for _ in range(population)]
 
     else:
         generation = merge(generation[:5], population, 2)
@@ -92,8 +75,7 @@ for generation_count in range(generations):
 
 print()
 print(f"Best Point: ({best_point.x}, {best_point.y})")
-print(f"Best Average Distance: {total_average_distance(best_point, coords)}")
-print(f"Best Maximum Difference: {maximum_displacement(best_point, coords)}")
+
 
 for index in range(len(coords)):
     print(f"{df["Name"][index]}: {dist.geodesic([best_point.x, best_point.y], [coords[index].x, coords[index].y])}")
@@ -102,12 +84,11 @@ for index in range(len(coords)):
 coords.append(best_point)
 df.loc[len(df.index)] = ['Meeting Point', 'somewhere', 'zz', best_point.x, best_point.y]
 
-fig = px.scatter_geo(df, lat='Latitude', lon='Longitude', hover_name="Name")
-fig.update_geos(visible=True, resolution=50, scope='usa',
+fig = px.scatter_geo(df, lat='Latitude', lon='Longitude', hover_name="Name",
+                     hover_data=[df["City"], df["State"]])
+fig.update_geos(visible=True,
                 showcountries=True, countrycolor='Black',
-                showsubunits=True, subunitcolor='Brown')
-
-
-fig.update_geos(fitbounds="locations")
+                showsubunits=True, subunitcolor='Brown',
+                projection_type="orthographic")
 
 fig.show()

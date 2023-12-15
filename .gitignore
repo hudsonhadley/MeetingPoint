@@ -1,0 +1,6 @@
+# ignore cities.csv which is personal
+cities.csv
+
+# this file is created by the program
+.idea
+

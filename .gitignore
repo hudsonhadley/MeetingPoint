@@ -3,4 +3,4 @@ cities.csv
 
 # this file is created by the program
 .idea
-
+__pycache__/

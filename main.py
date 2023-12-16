@@ -6,7 +6,8 @@ from shapely.geometry import Point
 import plotly.express as px
 import geopy.distance as dist
 
-from math import sqrt
+from get_coordinates import get_coordinate, get_address
+
 from random import uniform, randint
 
 
@@ -46,7 +47,11 @@ def merge(parents, population_size, mutation_rate):
 
 df = pd.read_csv("cities.csv")
 
-coords = [Point(xy) for xy in zip(df['Latitude'], df['Longitude'])]
+# Load the coordinates from the cities
+coords = [get_coordinate(row[0], row[1], row[2]) for row in zip(df["City"], df["State"], df["Country"])]
+
+df["Latitude"] = [coord.x for coord in coords]
+df["Longitude"] = [coord.y for coord in coords]
 
 generations = 200
 population = 200
@@ -72,20 +77,26 @@ for generation_count in range(generations):
 
         print(f"Generation {generation_count}: ({generation[0].x}, {generation[0].y})")
 
-
 print()
 print(f"Best Point: ({best_point.x}, {best_point.y})")
 
-
-for index in range(len(coords)):
-    print(f"{df["Name"][index]}: {dist.geodesic([best_point.x, best_point.y], [coords[index].x, coords[index].y])}")
-
+address = get_address(best_point.x, best_point.y)
+df.loc[len(df.index)] = ["Meeting Point", address[0], address[1], address[2], best_point.x, best_point.y]
 
 coords.append(best_point)
-df.loc[len(df.index)] = ['Meeting Point', 'somewhere', 'zz', best_point.x, best_point.y]
+
+name_and_distance = [{"Name": df["Name"][index],
+                      "Distance": dist.geodesic([best_point.x, best_point.y], [coords[index].x, coords[index].y])}
+                     for index in range(len(coords) - 1)]
+
+name_and_distance.sort(key=lambda x: x["Distance"])
+
+for index in range(len(coords) - 1):
+    print(f"{name_and_distance[index]["Name"]}: {name_and_distance[index]["Distance"]}")
 
 fig = px.scatter_geo(df, lat='Latitude', lon='Longitude', hover_name="Name",
-                     hover_data=[df["City"], df["State"]])
+                     hover_data=[df["City"], df["State"]],
+                     fitbounds="locations")
 fig.update_geos(visible=True,
                 showcountries=True, countrycolor='Black',
                 showsubunits=True, subunitcolor='Brown',
